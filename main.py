@@ -40,12 +40,12 @@ def get_best_pow(theta, data):
         for j in range(powr.shape[0]):
             weighted_score = np.dot(weights[j], scores)
             err_mat[i,j] = np.abs(weighted_score - desired_acc)
-    print("BEST ANGLE")
+    print("BEST POWER")
     print(powr)
     err_vals = np.sum(err_mat, axis=0) / steps
     print(err_vals)
     plt.plot(powr, err_vals)
-    plt.show()
+    plt.savefig("best-power.png")
 
 
 data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["val"]]
