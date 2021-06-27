@@ -3,14 +3,14 @@ import matplotlib.pyplot as plt
 import json
 
 
-def angle_dist(a, b, P):
+def angle_dist(a, b):
     clockwise_angle = np.abs(b-a)
-    anticlockwise_angle = np.abs( min(a,b) + (np.pi*P - max(a,b)) )
+    anticlockwise_angle = np.abs( min(a,b) + (np.pi*2 - max(a,b)) )
     return min(clockwise_angle,anticlockwise_angle)
 
 
 def isolation_measure(a, data, P):
-    return sum([angle_dist(a, d, P=P) for d in data])**P/len(data)
+    return sum([angle_dist(a, d)**P for d in data])**P/len(data)
 
 
 def isol_arr(data, P):
@@ -18,7 +18,8 @@ def isol_arr(data, P):
     dist = np.zeros((n, n))
     for i in range(n):
         for j in range(i + 1, n):
-            dist[i, j] = angle_dist(data[i], data[j], P=P)
+            dist[i, j] = angle_dist(data[i], data[j])**P
+            dist[j, i] = angle_dist(data[i], data[j])**P
     sum_i = np.sum(dist)
     return np.sum(dist, axis=1) / sum_i
 
@@ -49,7 +50,17 @@ def get_best_pow(theta, data):
 
 
 data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["val"]]
-get_best_pow(np.pi/3.0, data)
+
+p = np.linspace(1,4,21)
+
+for i in range(21):
+    print("Creating weights for p={}...".format(np.round(p[i])))
+    isol = isol_arr(data, p[i])
+    np.save(
+        open("weights/weight-val-{}.npy".format(np.round(p[i],1)), "wb"),
+        isol
+    )
+
 '''
 data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["val"][:4000]]
 
