@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import matplotlib.pyplot as plt
 import json
@@ -26,40 +28,63 @@ def isol_arr(data, P):
 
 # Finds best
 def get_best_pow(theta, data):
-    powr = np.linspace(1,3)
+    powr = np.linspace(1,4,21)
     steps = int(np.pi*2/theta)
     desired_acc = theta/(np.pi*2)
     weights = []
     for j in range(powr.shape[0]):
-        weights.append(isol_arr(data, P=powr[j]))
+        weights.append(np.load(open("weights/weight-val-{}.npy".format(np.round(powr[j],1)), "rb")))
 
     err_mat = np.zeros((steps,powr.shape[0]))
     for i in range(0,steps):
         scores = np.array([1 if i*theta <= d <= (i+1)*theta else 0.0 for d in data])
-        print("SHAPE")
-        print(powr.shape[0])
         for j in range(powr.shape[0]):
             weighted_score = np.dot(weights[j], scores)
             err_mat[i,j] = np.abs(weighted_score - desired_acc)
+
     print("BEST POWER")
     print(powr)
     err_vals = np.sum(err_mat, axis=0) / steps
-    print(err_vals)
     plt.plot(powr, err_vals)
     plt.savefig("best-power.png")
+    plt.clf()
+    return err_vals
+
+
+def save_weights(data, p=np.linspace(1,4,21)):
+    for i in range(p.shape[0]):
+        print("Creating weights for p={}...".format(np.round(p[i])))
+        isol = isol_arr(data, p[i])
+        np.save(
+            open("weights/weight-val-{}.npy".format(np.round(p[i], 1)), "wb"),
+            isol
+        )
 
 
 data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["val"]]
+save_weights(data, np.linspace(4,8,21))
 
-p = np.linspace(1,4,21)
+'''
+data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["val"]]
+powr = np.linspace(1, 4, 21)
 
-for i in range(21):
-    print("Creating weights for p={}...".format(np.round(p[i])))
-    isol = isol_arr(data, p[i])
-    np.save(
-        open("weights/weight-val-{}.npy".format(np.round(p[i],1)), "wb"),
-        isol
-    )
+err_vals = np.zeros((21,))
+for i in range(1,5):
+    err_vals += get_best_pow(np.pi/i, data)
+
+plt.plot(powr, err_vals/4.0)
+plt.savefig("total-best-power.png")'''
+
+
+'''
+scores = np.array([1 if d <= np.pi/4 else 0.0 for d in data])
+print("Unweighted")
+print(np.sum(scores)/len(data))
+
+weights = np.load(open("weights/weight-val-4.0.npy", "rb"))
+print("Weighted")
+print(np.dot(weights,scores))'''
+
 
 '''
 data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["val"][:4000]]
