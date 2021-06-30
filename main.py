@@ -6,11 +6,12 @@ import json
 import random
 
 
-def angle_dist(a, b):
-    a = np.rad2deg(a)
-    b = np.rad2deg(b)
+def angle_dist(a, b, deg=False):
+    if deg:
+        a = np.rad2deg(a)
+        b = np.rad2deg(b)
     clockwise_angle = np.abs(b-a)
-    anticlockwise_angle = np.abs( min(a,b) + (360.0 - max(a,b)) )
+    anticlockwise_angle = np.abs( min(a,b) + (360.0 - max(a,b)) ) if deg else np.abs( min(a,b) + (np.pi*2.0 - max(a,b)) )
     return min(clockwise_angle,anticlockwise_angle)
 
 
@@ -18,13 +19,13 @@ def isolation_measure(a, data, P):
     return sum([angle_dist(a, d)**P for d in data])**P/len(data)
 
 
-def isol_arr(data, P):
+def isol_arr(data, P, deg=False):
     n = len(data)
     dist = np.zeros((n, n))
     for i in range(n):
         for j in range(i + 1, n):
-            dist[i, j] = angle_dist(data[i], data[j])**P
-            dist[j, i] = angle_dist(data[i], data[j])**P
+            dist[i, j] = angle_dist(data[i], data[j], deg=deg)**P
+            dist[j, i] = angle_dist(data[i], data[j], deg=deg)**P
     sum_i = np.sum(dist)
     return np.sum(dist, axis=1) / sum_i
 
@@ -54,20 +55,20 @@ def get_best_pow(theta, data):
     return err_vals
 
 
-def save_weights(data, p=np.linspace(1,4,21)):
+def save_weights(data, p=np.linspace(1,4,21), deg=False):
     for i in range(p.shape[0]):
         print("Creating weights for p={}...".format(np.round(p[i])))
-        isol = isol_arr(data, p[i])
+        isol = isol_arr(data, p[i], deg=deg)
         np.save(
-            open("weights/weight-val-{}.npy".format(np.round(p[i], 1)), "wb"),
+            open("weights/weight-val-{}-{}.npy".format(np.round(p[i], 1), "deg" if deg else "rad"), "wb"),
             isol
         )
 
 
 data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["val"]]
 
-save_weights(data, np.array([2.0]))
-
+save_weights(data, np.array([2.0]), deg=True)
+save_weights(data, np.array([2.0]), deg=False)
 '''
 data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["val"]]
 powr = np.linspace(1, 4, 21)
@@ -88,12 +89,13 @@ def get_bins(weights, data):
     return weighted_bins
 
 
-w = np.load(open("weights/weight-val-2.0.npy", "rb"))
+w = np.load(open("weights/weight-val-2.0-rad.npy", "rb"))
+w1 = np.load(open("weights/weight-val-2.0-deg.npy", "rb"))
 bins = get_bins(w, data)
 
 f = plt.figure()
 ax = f.add_subplot(projection="polar")
-new_bins = get_bins([1.0/len(data) for _ in range(len(data))], data)
+new_bins = get_bins(w1, data)
 ax.plot([np.pi*2/24.0*i+np.pi/24.0 for i in range(24)] + [np.pi/24.0], new_bins + [new_bins[0]])
 ax.plot([np.pi*2/24.0*i+np.pi/24.0 for i in range(24)] + [np.pi/24.0], bins + [bins[0]])
 plt.savefig("test.png")
