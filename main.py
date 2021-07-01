@@ -4,7 +4,35 @@ import numpy as np
 import matplotlib.pyplot as plt
 import json
 import random
+import matplotlib.cm as cm
 
+def distance_elevation_azimuth(xyz):
+    x = xyz[:,0]
+    y = xyz[:,1]
+    z = xyz[:,2]
+    theta = np.abs(90-np.rad2deg(np.arccos(z / np.sqrt(x ** 2 + y ** 2 + z ** 2))))
+    c = z < 0
+    theta = theta - 2*c*theta
+    #if z < 0:
+    #    theta *= -1.0
+    phi = np.rad2deg(np.arctan2(y,x))
+    d = phi < 0
+    phi = phi + 360.0*d
+    #if phi < 0.0:
+    #    phi += 360.0
+    return [np.sqrt(x**2+y**2+z**2), theta, phi]
+
+def distance_elevation_azimuth_old(xyz):
+    x = xyz[:,0]
+    y = xyz[:,1]
+    z = xyz[:,2]
+    theta = np.abs(90-np.rad2deg(np.arccos(z / np.sqrt(x ** 2 + y ** 2 + z ** 2))))
+    if z < 0:
+        theta *= -1.0
+    phi = np.rad2deg(np.arctan2(y,x))
+    if phi < 0.0:
+        phi += 360.0
+    return [np.sqrt(x**2+y**2+z**2), theta, phi]
 
 def angle_dist(a, b, deg=False):
     if deg:
@@ -28,6 +56,17 @@ def isol_arr(data, P, deg=False):
             dist[j, i] = angle_dist(data[i], data[j], deg=deg)**P
     sum_i = np.sum(dist)
     return np.sum(dist, axis=1) / sum_i
+
+
+def isol_arr_new(data, P, deg=False):
+    n = len(data)
+    dist = np.zeros((n, n))
+    for i in range(n):
+        for j in range(i + 1, n):
+            dist[i, j] = angle_dist(data[i], data[j], deg=deg)**P
+            dist[j, i] = angle_dist(data[i], data[j], deg=deg)**P
+    dist = np.sort(dist, axis=1) @ np.array([1.0**i for i in range(n)])
+    return dist / np.sum(dist)
 
 
 # Finds best
@@ -55,20 +94,24 @@ def get_best_pow(theta, data):
     return err_vals
 
 
-def save_weights(data, p=np.linspace(1,4,21), deg=False):
+def save_weights(data, dset="val", p=np.linspace(1,4,21), deg=False):
     for i in range(p.shape[0]):
         print("Creating weights for p={}...".format(np.round(p[i])))
         isol = isol_arr(data, p[i], deg=deg)
         np.save(
-            open("weights/weight-val-{}-{}.npy".format(np.round(p[i], 1), "deg" if deg else "rad"), "wb"),
+            open("weights/weight-{}-{}-{}.npy".format(dset, np.round(p[i], 1), "deg" if deg else "rad"), "wb"),
             isol
         )
 
 
-data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["val"]]
+val_data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["val"]]
+train_data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["train"]]
 
-save_weights(data, np.array([2.0]), deg=True)
-save_weights(data, np.array([2.0]), deg=False)
+save_weights(val_data, "val", np.array([2.0]))
+save_weights(val_data, "train", np.array([2.0]))
+
+sys.exit()
+
 '''
 data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["val"]]
 powr = np.linspace(1, 4, 21)
@@ -81,7 +124,9 @@ plt.plot(powr, err_vals/4.0)
 plt.savefig("total-best-power.png")'''
 
 
-def get_bins(weights, data):
+def get_bins(data, weights=None):
+    if weights is None:
+        weights = [1.0/len(data) for _ in range(len(data))]
     weighted_bins = []
     for i in range(24):
         s = sum([weights[j] if np.deg2rad(15 * i) <= d < np.deg2rad(15 * (i + 1)) else 0.0 for j, d in enumerate(data)])
@@ -89,15 +134,15 @@ def get_bins(weights, data):
     return weighted_bins
 
 
-w = np.load(open("weights/weight-val-2.0-rad.npy", "rb"))
-w1 = np.load(open("weights/weight-val-2.0-deg.npy", "rb"))
-bins = get_bins(w, data)
-
+w = isol_arr_new(data, 2.0)
+weighted_bins = get_bins(data, w)
+bins = get_bins(data)
 f = plt.figure()
-ax = f.add_subplot(projection="polar")
-new_bins = get_bins(w1, data)
-ax.plot([np.pi*2/24.0*i+np.pi/24.0 for i in range(24)] + [np.pi/24.0], new_bins + [new_bins[0]])
-ax.plot([np.pi*2/24.0*i+np.pi/24.0 for i in range(24)] + [np.pi/24.0], bins + [bins[0]])
+ax = f.add_subplot(1,2,1,projection="polar")
+ax.bar([np.deg2rad(15.0*(i+0.5)) for i in range(24)], weighted_bins, width=np.deg2rad(15.0), edgecolor='k')
+ax2 = f.add_subplot(1,2,2,projection="polar")
+ax2.bar([np.deg2rad(15.0*(i+0.5)) for i in range(24)], bins, width=np.deg2rad(15.0), edgecolor='k')
+print(bins)
 plt.savefig("test.png")
 
 sys.exit()
