@@ -165,10 +165,9 @@ def create_samples(deg_data, dir):
     np.save(dir + "annotation.npy", annotation)
 
 
-# val_deg_data = [x for x in json.load(open("az_data.txt"))["val"]]
-# create_samples(val_deg_data, "datasets/val_dataset/")
+val_deg_data = [x for x in json.load(open("az_data.txt"))["val"]]
+create_samples(val_deg_data, "datasets/val_dataset/")
 
-print(np.load("datasets/val_dataset/annotation.npy"))
 
 sys.exit()
 val_data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["val"]]
