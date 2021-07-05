@@ -94,7 +94,7 @@ def epoch(dataloader, model, loss_fn, optimizer=None):
 
 
 dataset = ClassificationDataset()
-train_set, val_set = torch.utils.data.random_split(dataset, [30000, 16656])
+train_set, val_set = torch.utils.data.random_split(dataset, [600000, 333120])
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
