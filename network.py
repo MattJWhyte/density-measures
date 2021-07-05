@@ -25,16 +25,35 @@ class ClassificationDataset(Dataset):
 
 class ValNet(nn.Module):
 
-    def __init__(self):
+    def __init__(self, n=11206):
         super(ValNet, self).__init__()
         # No more than 1024
-        self.fc1 = nn.Linear(11206, 360)
+        self.fc1 = nn.Linear(n, 360)
         self.fc2 = nn.Linear(360, 1)
 
         self.fc1_bn = nn.BatchNorm1d(360)
 
     def forward(self, x):
         x = F.relu(self.fc1_bn(self.fc1(x)))
+        return F.relu(self.fc2(x))
+
+    def save(self, PATH):
+        torch.save(self.state_dict(), PATH)
+
+    def load(self, PATH):
+        self.load_state_dict(torch.load(PATH))
+
+
+class ValNetSimp(nn.Module):
+
+    def __init__(self, n=11206):
+        super(ValNetSimp, self).__init__()
+        # No more than 1024
+        self.fc1 = nn.Linear(n, 360)
+        self.fc2 = nn.Linear(360, 1)
+
+    def forward(self, x):
+        x = self.fc1(x)
         return F.relu(self.fc2(x))
 
     def save(self, PATH):
@@ -106,7 +125,7 @@ test_acc_ls = []
 train_dataloader = DataLoader(train_set, batch_size=512, shuffle=True)
 test_dataloader = DataLoader(val_set, batch_size=512)
 
-model = ValNet()
+model = ValNetSimp()
 model.to(device)
 name = type(model).__name__.lower()
 
