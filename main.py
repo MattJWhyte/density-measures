@@ -135,33 +135,37 @@ def clockwise_len(I):
 # Data must be in degrees
 def create_samples(deg_data, dir):
     n = len(deg_data)
-    annotation = np.zeros(46656)
+    annotation = np.zeros(933120)
     ct = 0
-    for i in range(0,360,10):
-        if i % 40 == 0:
-            print("{}% complete...".format(np.round(ct/46646.0*100.0)))
-        for i_s in range(15, 100, 15):
-            for j in range(0,360,10):
-                for j_s in range(15, 100, 15):
-                    i_int = [(i - i_s) % 360, (i + i_s) % 360]
-                    j_int = [(j - j_s) % 360, (j + j_s) % 360]
-                    intersect = intersection(i_int, j_int)
-                    acc = np.zeros(n)
-                    i_rand = np.random.rand()*0.25
-                    j_rand = np.random.rand()*0.25
-                    rest_rand = np.random.rand()*0.25+0.75
-                    for k,d in enumerate(deg_data):
-                        if i_int[0] <= d <= i_int[1]:
-                            acc[k] = 1.0 if np.random.rand() > i_rand else 0.0
-                        elif j_int[0] <= d <= j_int[1]:
-                            acc[k] = 1.0 if np.random.rand() > j_rand else 0.0
-                        else:
-                            acc[k] = 1.0 if np.random.rand() > rest_rand else 0.0
-                    annotation[ct] = (clockwise_len(i_int)*(1-i_rand) + (clockwise_len(j_int)-intersect)*(1-j_rand)
-                           + (360.0-(clockwise_len(i_int)+clockwise_len(j_int)-intersect))*(1-rest_rand))/360.0
-                    # annotation[ct] = (clockwise_len(i_int)+clockwise_len(j_int)-intersect)/360.0
-                    np.save(dir+"sample-{}.npy".format(ct), acc)
-                    ct += 1
+    for epoch in range(4):
+        print("{}% Complete ...".format(epoch/4.0))
+        for l in [0.1, 0.25, 0.5, 0.75, 1.0]:
+            for i in range(0, 360, 10):
+                for i_s in range(15, 100, 15):
+                    for j in range(0, 360, 10):
+                        for j_s in range(15, 100, 15):
+                            i_int = [(i - i_s) % 360, (i + i_s) % 360]
+                            j_int = [(j - j_s) % 360, (j + j_s) % 360]
+                            intersect = intersection(i_int, j_int)
+                            acc = np.zeros(n)
+                            i_rand = np.random.rand() * l
+                            j_rand = np.random.rand() * l
+                            rest_rand = np.random.rand() * l + (1.0 - l)
+                            for k, d in enumerate(deg_data):
+                                if i_int[0] <= d <= i_int[1]:
+                                    acc[k] = 1.0 if np.random.rand() > i_rand else 0.0
+                                elif j_int[0] <= d <= j_int[1]:
+                                    acc[k] = 1.0 if np.random.rand() > j_rand else 0.0
+                                else:
+                                    acc[k] = 1.0 if np.random.rand() > rest_rand else 0.0
+                            annotation[ct] = (clockwise_len(i_int) * (1 - i_rand) + (
+                                        clockwise_len(j_int) - intersect) * (
+                                                      1 - j_rand)
+                                              + (360.0 - (clockwise_len(i_int) + clockwise_len(j_int) - intersect)) * (
+                                                      1 - rest_rand)) / 360.0
+                            # annotation[ct] = (clockwise_len(i_int)+clockwise_len(j_int)-intersect)/360.0
+                            np.save(dir + "sample-{}.npy".format(ct), acc)
+                            ct += 1
     np.save(dir + "annotation.npy", annotation)
 
 
