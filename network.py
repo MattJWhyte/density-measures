@@ -49,12 +49,10 @@ class ValNetSimp(nn.Module):
     def __init__(self, n=11206):
         super(ValNetSimp, self).__init__()
         # No more than 1024
-        self.fc1 = nn.Linear(n, 360)
-        self.fc2 = nn.Linear(360, 1)
+        self.fc1 = nn.Linear(n, 1)
 
     def forward(self, x):
-        x = self.fc1(x)
-        return F.relu(self.fc2(x))
+        return F.relu(self.fc1(x))
 
     def save(self, PATH):
         torch.save(self.state_dict(), PATH)
