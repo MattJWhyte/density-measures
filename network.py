@@ -67,7 +67,7 @@ def epoch(dataloader, model, loss_fn, optimizer=None):
         pred = pred.detach().cpu().numpy()
         y = y.detach().cpu().numpy()
 
-        correct += np.count_nonzero(pred - y < 0.1)
+        correct += np.count_nonzero(np.abs(pred - y) < 0.1)
 
         epoch_loss += loss.item()
 
