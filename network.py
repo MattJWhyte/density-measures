@@ -1,5 +1,6 @@
 
 import torch.nn as nn
+import torch.nn.functional as F
 import torchvision
 import numpy as np
 import torch
@@ -27,11 +28,14 @@ class ValNet(nn.Module):
     def __init__(self):
         super(ValNet, self).__init__()
         # No more than 1024
-        self.fc1 = nn.Linear(11206, 1)
+        self.fc1 = nn.Linear(11206, 360)
+        self.fc2 = nn.Linear(360, 1)
+
+        self.fc1_bn = nn.BatchNorm1d(360)
 
     def forward(self, x):
-        x = self.fc1(x)
-        return x
+        x = F.relu(self.fc1_bn(self.fc1(x)))
+        return F.relu(self.fc2(x))
 
     def save(self, PATH):
         torch.save(self.state_dict(), PATH)
