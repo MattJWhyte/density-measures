@@ -6,6 +6,7 @@ import json
 import random
 import matplotlib.cm as cm
 
+
 def distance_elevation_azimuth(xyz):
     x = xyz[:,0]
     y = xyz[:,1]
@@ -22,6 +23,7 @@ def distance_elevation_azimuth(xyz):
     #    phi += 360.0
     return [np.sqrt(x**2+y**2+z**2), theta, phi]
 
+
 def distance_elevation_azimuth_old(xyz):
     x = xyz[:,0]
     y = xyz[:,1]
@@ -33,6 +35,7 @@ def distance_elevation_azimuth_old(xyz):
     if phi < 0.0:
         phi += 360.0
     return [np.sqrt(x**2+y**2+z**2), theta, phi]
+
 
 def angle_dist(a, b, deg=False):
     if deg:
@@ -47,13 +50,18 @@ def isolation_measure(a, data, P):
     return sum([angle_dist(a, d)**P for d in data])**P/len(data)
 
 
-def isol_arr(data, P, deg=False):
+def angle_dist_mat(data, P):
     n = len(data)
     dist = np.zeros((n, n))
     for i in range(n):
         for j in range(i + 1, n):
-            dist[i, j] = angle_dist(data[i], data[j], deg=deg)**P
-            dist[j, i] = angle_dist(data[i], data[j], deg=deg)**P
+            dist[i, j] = angle_dist(data[i], data[j]) ** P
+            dist[j, i] = angle_dist(data[i], data[j]) ** P
+    return dist
+
+
+def isol_arr(data, P, deg=False):
+    dist = angle_dist_mat(data, P)
     sum_i = np.sum(dist)
     return np.sum(dist, axis=1) / sum_i
 
@@ -104,11 +112,86 @@ def save_weights(data, dset="val", p=np.linspace(1,4,21), deg=False):
         )
 
 
-val_data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["val"]]
-train_data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["train"]]
+def discounted_distance(d):
+    return np.exp((-6.0/np.pi)*(d**2))
 
-save_weights(val_data, "val", np.array([2.0]))
-save_weights(val_data, "train", np.array([2.0]))
+
+def intersection(I1, I2):
+    if I1[0] > I1[1]:
+        I1[0] = I1[0]-360.0
+    if I2[0] > I2[1]:
+        I2[0] = I2[0]-360.0
+    m = max(I1[0], I2[0])
+    M = min(I1[1], I2[1])
+    return max(M-m, 0)
+
+
+def clockwise_len(I):
+    if I[0] > I[1]:
+        return I[1] - (I[0]-360.0)
+    return I[1]-I[0]
+
+
+# Data must be in degrees
+def create_samples(deg_data, dir):
+    n = len(deg_data)
+    annotation = np.zeros(46656)
+    ct = 0
+    for i in range(0,360,10):
+        if i % 40 == 0:
+            print("{}% complete...".format(np.round(ct/46646.0*100.0)))
+        for i_s in range(15, 100, 15):
+            for j in range(0,360,10):
+                for j_s in range(15, 100, 15):
+                    i_int = [(i - i_s) % 360, (i + i_s) % 360]
+                    j_int = [(j - j_s) % 360, (j + j_s) % 360]
+                    intersect = intersection(i_int, j_int)
+                    acc = np.zeros(n)
+                    i_rand = np.random.rand()*0.5
+                    j_rand = np.random.rand()*0.5
+                    rest_rand = np.random.rand()*0.5+0.5
+                    for k,d in enumerate(deg_data):
+                        if i_int[0] <= d <= i_int[1]:
+                            acc[k] = 1.0 if np.random.rand() > i_rand else 0.0
+                        elif j_int[0] <= d <= j_int[1]:
+                            acc[k] = 1.0 if np.random.rand() > j_rand else 0.0
+                        else:
+                            acc[k] = 1.0 if np.random.rand() > rest_rand else 0.0
+                    annotation[ct] = (clockwise_len(i_int)*(1-i_rand) + (clockwise_len(j_int)-intersect)*(1-j_rand)
+                           + (360.0-(clockwise_len(i_int)+clockwise_len(j_int)-intersect))*(1-rest_rand))/360.0
+                    # annotation[ct] = (clockwise_len(i_int)+clockwise_len(j_int)-intersect)/360.0
+                    np.save(dir+"sample-{}.npy".format(ct), acc)
+                    ct += 1
+    np.save(dir + "annotation.npy", annotation)
+
+
+val_deg_data = [x for x in json.load(open("az_data.txt"))["val"]]
+create_samples(val_deg_data, "datasets/val_dataset/")
+
+sys.exit()
+val_data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["val"]]
+#train_data = [np.deg2rad(x) for x in json.load(open("az_data.txt"))["train"]]
+
+dist_mat = np.load("val_abs_dist_mat.npy")
+discounted_dist_mat = np.frompyfunc(discounted_distance, 1, 1)
+dist_mat = discounted_dist_mat(dist_mat)
+dist_mat = np.sum(dist_mat, axis=1)**(-1)
+dist_mat = dist_mat/np.sum(dist_mat)
+
+print(np.sum(dist_mat))
+
+
+f = plt.figure()
+ax = f.add_subplot(1,1,1,projection="polar")
+ax.scatter(val_data, dist_mat, s=5)
+plt.savefig("new-weighted-dist-3.png")
+
+np.save("rbf-weights-val.npy", dist_mat)
+
+#save_weights(val_data, "val", np.array([2.0]))
+#save_weights(val_data, "train", np.array([2.0]))
+
+
 
 sys.exit()
 
