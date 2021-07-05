@@ -168,9 +168,46 @@ def create_samples(deg_data, dir):
                             ct += 1
     np.save(dir + "annotation.npy", annotation)
 
+# Data must be in degrees
+def create_deg_samples(deg_data, dir):
+    n = len(deg_data)
+    annotation = np.zeros(933120)
+    ct = 0
+    for epoch in range(4):
+        print("{}% Complete ...".format(epoch/4.0))
+        for l in [0.1, 0.25, 0.5, 0.75, 1.0]:
+            for i in range(0, 360, 10):
+                for i_s in range(15, 100, 15):
+                    for j in range(0, 360, 10):
+                        for j_s in range(15, 100, 15):
+                            i_int = [(i - i_s) % 360, (i + i_s) % 360]
+                            j_int = [(j - j_s) % 360, (j + j_s) % 360]
+                            intersect = intersection(i_int, j_int)
+                            acc = np.zeros(n)
+                            i_rand = np.random.rand() * l
+                            j_rand = np.random.rand() * l
+                            rest_rand = np.random.rand() * l + (1.0 - l)
+                            deg = np.zeros(360)
+                            for k, d in enumerate(deg_data):
+                                if i_int[0] <= d <= i_int[1]:
+                                    acc[k] = 1.0 if np.random.rand() > i_rand else 0.0
+                                elif j_int[0] <= d <= j_int[1]:
+                                    acc[k] = 1.0 if np.random.rand() > j_rand else 0.0
+                                else:
+                                    acc[k] = 1.0 if np.random.rand() > rest_rand else 0.0
+
+                                deg[int(np.round(d)%360)] += 1.0
+
+                            annotation[ct] = (clockwise_len(i_int) * (1 - i_rand) + (clockwise_len(j_int) - intersect) * (1 - j_rand)
+                                              + (360.0 - (clockwise_len(i_int) + clockwise_len(j_int) - intersect)) * (1 - rest_rand)) / 360.0
+                            # annotation[ct] = (clockwise_len(i_int)+clockwise_len(j_int)-intersect)/360.0
+                            np.save(dir + "sample-{}.npy".format(ct), deg)
+                            ct += 1
+    np.save(dir + "annotation.npy", annotation)
+
 
 val_deg_data = [x for x in json.load(open("az_data.txt"))["val"]]
-create_samples(val_deg_data, "datasets/val_dataset/")
+create_deg_samples(val_deg_data, "datasets/val_deg_dataset/")
 
 
 sys.exit()
