@@ -122,7 +122,7 @@ test_acc_ls = []
 train_dataloader = DataLoader(train_set, batch_size=512, shuffle=True)
 test_dataloader = DataLoader(val_set, batch_size=512)
 
-model = ValNetSimp()
+model = ValNetSimp(n=360)
 model.to(device)
 name = type(model).__name__.lower()
 
