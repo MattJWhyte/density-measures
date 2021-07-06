@@ -12,8 +12,8 @@ DATASET_DIR = "datasets/val_dataset/"
 
 class ClassificationDataset(Dataset):
 
-    def __init__(self):
-        self.labels = np.load(DATASET_DIR + "annotation.npy")
+    def __init__(self, dr=DATASET_DIR):
+        self.labels = np.load(dr + "annotation.npy")
 
     def __len__(self):
         return self.labels.shape[0]
@@ -109,7 +109,7 @@ def epoch(dataloader, model, loss_fn, optimizer=None):
         test_acc_ls.append(correct)
 
 
-dataset = ClassificationDataset()
+dataset = ClassificationDataset(dr="datasets/val_deg_dataset/")
 train_set, val_set = torch.utils.data.random_split(dataset, [600000, 333120])
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
